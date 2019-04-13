@@ -1,194 +1,40 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+
 #include <emscripten.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "architecture.h"
+#include "bit_manip.h"
+//#include "unix_terminal_shit.h"
+#include "virtual_terminal.h"
 
 // Allocate 65536 memory locations
 uint16_t memory[UINT16_MAX];
-
-// Muh registers
-enum {
-	R_R0 = 0, // 8 general purpose registers
-	R_R1,
-	R_R2,
-	R_R3,
-	R_R4,
-	R_R5,
-	R_R6,
-	R_R7,
-	R_PC,// Program counter
-	R_COND, // Condition register
-	R_COUNT // Not a register, just number of registers
-};
-
-
-// Muh operators
-enum {
-	OP_BR = 0, 	// Branch
-	OP_ADD, 	// Add
-	OP_LD, 		// Load
-	OP_ST, 		// Store
-	OP_JSR, 	// Jump register
-	OP_AND, 	// Bitwise AND operator
-	OP_LDR, 	// Load Register
-	OP_STR, 	// Store register
-	OP_RTI, 	// Unused
-	OP_NOT, 	// Bitwise NOT operator
-	OP_LDI, 	// Load indirect
-	OP_STI, 	// Store indirect
-	OP_JMP, 	// Jump
-	OP_RES, 	// Reserved (unused)
-	OP_LEA, 	// Load Effective Adress
-	OP_TRAP 	// Execute trap
-};
-
-// Muh condition flags
-enum {
-	FL_POS = 1 << 0, // P
-	FL_ZRO = 1 << 1, // Z
-	FL_NEG = 1 << 2, // N
-};
-
-// Muh trap codes
-enum
-{
-	TRAP_GETC = 0x20,  /* get character from keyboard */
-	TRAP_OUT = 0x21,   /* output a character */
-	TRAP_PUTS = 0x22,  /* output a word string */
-	TRAP_IN = 0x23,    /* input a string */
-	TRAP_PUTSP = 0x24, /* output a byte string */
-	TRAP_HALT = 0x25   /* halt the program */
-};
-
-// Muh memory mapped registers
-enum
-{
-    MR_KBSR = 0xFE00, /* keyboard status */
-    MR_KBDR = 0xFE02  /* keyboard data */
-};
-
 // Registers are stored in an array
-uint16_t reg[R_COUNT];
+uint16_t reg[R_COUNT];	
 
-uint16_t check_key()
-{
-	return 1;
-}
+#include "memory.h"
+#include "files.h"
 
-uint16_t mem_read(uint16_t address)
-{
-    if (address == MR_KBSR)
-    {
-        if (check_key())
-        {
-           memory[MR_KBSR] = (1 << 15);
-           memory[MR_KBDR] = getchar();
-        }
-        else
-        {
-            memory[MR_KBSR] = 0;
-        }
-    }
-    return memory[address];
-}
 
-void mem_write(uint16_t address, uint16_t val)
-{
-    memory[address] = val;
-}
+int EMSCRIPTEN_KEEPALIVE main(){
 
-uint16_t sign_extend(uint16_t x, int bit_count){
-	if(( x >> bit_count - 1) & 1) {
-		x |= (0xFFFF << bit_count);
-	}
-	return x;
-}
-
-uint16_t update_flags(uint16_t r){
-
-	// After addition there is a rule:
-	// "The condition codes are set, based on whether the result is negative, zero, or positive"
-	// That's what we do here
-
-	if(reg[r] == 0)
-		reg[R_COND] = FL_ZRO;
-	else if(reg[r] >> 15) // A 1 in the leftmost bit indicates negative
-		reg[R_COND] = FL_NEG;
-	else
-		reg[R_COND] = FL_POS;
-}
-
-uint16_t swap16(uint16_t x){
-    return (x << 8) | (x >> 8);
-}
-
-void read_image_file(FILE* file){
-    uint16_t origin;
-    fread(&origin, sizeof(origin), 1, file);
-    origin = swap16(origin);
-
-    uint16_t max_read = UINT16_MAX - origin;
-    uint16_t* p = memory+origin;
-    size_t read = fread(p, sizeof(uint16_t), max_read, file);
-
-    while(read-- > 0){
-        *p = swap16(*p);
-        ++p;
-    }
-}
-
-int read_image(const char* image_path){
-    FILE* file = fopen(image_path, "rb");
-    if(!file)
-        return 0;
-    read_image_file(file);
-    fclose(file);
-    return 1;
-}
-	
-
-int EMSCRIPTEN_KEEPALIVE main(int argc, const char* argv[]){
-	if (argc < 2)
+	_printstring("I got this from a dealer:\n");
+	_printstring(read_image());
+	_printstring("True story\n");
+	if (!read_image())
 	{
-		/* show usage string */
-		printf("lc3 [image-file1] ...\n");
-		exit(2);
+		_printstring("failed to load image: %s\n");
+		return 1;
 	}
 
-	for (int j = 1; j < argc; ++j)
-	{
-		if (!read_image(argv[j]))
-		{
-			printf("failed to load image: %s\n", argv[j]);
-			exit(1);
-		}
-	}
 	
 	// Set PC to starting position
 	// 0x3000 is the default
-	enum { PC_START = 0x3000 };
+	const uint16_t PC_START = 0x3000;
 	reg[R_PC] = PC_START;
 
-	char *instr_str[16];
-	instr_str[0] = "BR";
-	instr_str[1] = "ADD";
-	instr_str[2] = "LD";
-	instr_str[3] = "ST";
-	instr_str[4] = "JSR";
-	instr_str[5] = "AND";
-	instr_str[6] = "LDR";
-	instr_str[7] = "STR";
-	instr_str[8] = "RTI";
-	instr_str[9] = "NOT";
-	instr_str[10] = "LDI";
-	instr_str[11] = "STI";
-	instr_str[12] = "JMP";
-	instr_str[13] = "RES";
-	instr_str[14] = "LEA";
-	instr_str[15] = "TRAP";
-
-	int debug_mode = 0;
 
 	int running = 1;
 	while(running){
@@ -198,8 +44,7 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, const char* argv[]){
 		reg[R_PC]++;
 		// The operator is saved at the left 4 bits of the instruction
 		uint16_t op = instr >> 12;
-		if(debug_mode)
-			printf("%s ", instr_str[op]);
+
 		switch(op){
 			case OP_ADD:
 				{
@@ -370,26 +215,23 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, const char* argv[]){
 				{
 					switch (instr & 0xFF){
 			    			case TRAP_GETC:
-								reg[R_R0] = (uint16_t)getchar();
+								reg[R_R0] = getcharacter();
 			        			break;
 		        			case TRAP_OUT:
-								putc((char)reg[R_R0], stdout);
-								fflush(stdout);
-							
+								printchar(reg[R_R0]);	
 	       						break;
     						case TRAP_PUTS:
 								{
 									uint16_t* c = memory + reg[R_R0];
 									while(*c){
-										putc((char)*c, stdout);
+										printchar(*c);
 										++c;
 									}
-									fflush(stdout);
 								}
         						break;
     						case TRAP_IN:
-								printf("Enter a character: ");
-								reg[R_R0] = (uint16_t)getchar();
+								_printstring("Enter a character: ");
+								reg[R_R0] = getcharacter();
 
 								break;
 					    	case TRAP_PUTSP:
@@ -397,19 +239,17 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, const char* argv[]){
 								uint16_t* c = memory + reg[R_R0];
 								while(*c){
 									char char1 = (*c) & 0xFF;
-									putc(char1, stdout);
+									printchar(*c);
 									char char2 = (*c) >> 8;
 									if(char2)
-										putc(char2, stdout);
+										printchar(char2);
 									++c;
 								}
-								fflush(stdout);
 							}
 							break;
 					    	case TRAP_HALT:
 							{
-								puts("HALT");
-								fflush(stdout);
+								_printstring("HALT");
 								running = 0;
 							}
 							break;
@@ -419,13 +259,8 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, const char* argv[]){
 			case OP_RES:
 			case OP_RTI:
 			default:
-				abort();
 				break;
 		}
 	}
 	return 0;
 }
-
-#ifdef __cplusplus
-}
-#endif
