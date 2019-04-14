@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <emscripten.h>
 
@@ -17,24 +18,17 @@ uint16_t reg[R_COUNT];
 #include "memory.h"
 #include "files.h"
 
+int EMSCRIPTEN_KEEPALIVE main(){	
 
-int EMSCRIPTEN_KEEPALIVE main(){
+	load_image();
+	_printstring("File loaded\n");
 
-	_printstring("I got this from a dealer:\n");
-	_printstring(read_image());
-	_printstring("True story\n");
-	if (!read_image())
-	{
-		_printstring("failed to load image: %s\n");
-		return 1;
-	}
-
-	
 	// Set PC to starting position
 	// 0x3000 is the default
 	const uint16_t PC_START = 0x3000;
 	reg[R_PC] = PC_START;
 
+	int limiter = 10;
 
 	int running = 1;
 	while(running){
@@ -213,7 +207,8 @@ int EMSCRIPTEN_KEEPALIVE main(){
 				break;
 			case OP_TRAP:
 				{
-					switch (instr & 0xFF){
+						
+						switch (instr & 0xFF){
 			    			case TRAP_GETC:
 								reg[R_R0] = getcharacter();
 			        			break;

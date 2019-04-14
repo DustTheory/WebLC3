@@ -1,51 +1,74 @@
-
-var binary_file;
-
-const fileSelector = document.getElementById('fileSelector')
-fileSelector.addEventListener('change', (event) => {
-	const file = event.target.files[0]
-	const filereader = new FileReader()
-	filereader.onloadend = function(evt) {
-		if (evt.target.readyState === FileReader.DONE)
-			binary_file = evt.target;
+onmessage = function(e){
+	let request = e.data.request;
+	if(request == 'load_binary'){
+		run_binary(e.data.binary);
 	}
-	filereader.readAsBinaryString(file);
-	run_binary();
-}); 
+}
 
-function run_binary(){	
+function getcharacter(){
+	postMessage({
+		request: 'get_character'
+	});	
+}
+
+function printstring(s){
+	postMessage({
+		request: 'print_string',
+		string: s
+	});	
+}
+
+function printchar(c){
+	postMessage({
+		request: 'print_character',
+		character: c
+	});	
+}
+
+function terminate(reason){
+	postMessage({
+		request: 'terminate_me',
+		reason: reason
+	});	
+}
+
+function run_binary(binary_file){	
 	if(!binary_file){
-		console.log("No file loaded");
+		terminate("No file loaded");
 	}else{
 		fetch('vm.wasm').then(response => response.arrayBuffer()).then(bytes =>{
 			const memory = new WebAssembly.Memory({initial:1000});
+			const arrayBuffer = memory.buffer;
 			const importObject= {
 					'env' : {
-						'_getcharacter' : function() {},
+						'_getcharacter' : getcharacter,
 						'_printstring' : handlePrintString,
-						'_printchar' : function() {},
-						'_read_image' : function() {
-							return binary_file;
+						'_printchar' : printchar,
+						'_get_image_size': function(){
+							return binary_file.length;
 						},
-						'__memory_base' : 0,
-						'__table_base' : 0,
+						'_read_image' : function(ptr, len) {
+							let wasm_image = new Uint8Array(arrayBuffer, ptr, len);
+							wasm_image.set(binary_file);
+							return;
+						},
+						'__memory_base' : 0,	
 						'memory' : memory,
 						'table': new WebAssembly.Table({initial: 2, element: 'anyfunc'})
 					}
 			};
 			const module = new WebAssembly.Module(bytes);
 			const instance = new WebAssembly.Instance(module, importObject);
-			const arrayBuffer = memory.buffer;
 			const buffer = new Uint8Array(arrayBuffer);
 			instance.exports._main()
 		
-			function handlePrintString(ptr, len) {
+			function handlePrintString(ptr, len, callback) {
 				const view = new Uint8Array(memory.buffer, ptr, len);
 				let string = '';
 				for (let i = 0; i < len; i++) {
 					string += String.fromCharCode(view[i]);
 				}
-				console.log(string);
+				printstring(string);
 			}
 		});
 	}
