@@ -1,9 +1,0 @@
-memory.h > check_key()
-files.h > read_image()
-vm.c:
-	TRAP_GETC
-	TRAP_OUT
-	TRAP_PUTS
-	TRAP_IN
-	TRAP_PUTSP
-	TRAP_HALT
