@@ -1,0 +1,8 @@
+.terminal{
+	height: 50%;
+	width: 50%;
+	overflow-y: scroll;
+	background-color: black;
+	color: green;
+	padding: 10px;
+}

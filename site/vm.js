@@ -1,36 +1,40 @@
+var te = new TextEncoder("utf8");
+
 onmessage = function(e){
-	let request = e.data.request;
-	if(request == 'load_binary'){
-		run_binary(e.data.binary);
-	}
+	run_binary(new Uint8Array(e.data));
 }
 
 function getcharacter(){
-	postMessage({
-		request: 'get_character'
-	});	
+	send_obj({request:'get_character'});
 }
 
 function printstring(s){
-	postMessage({
-		request: 'print_string',
+	send_obj({
+		request:'print_string',
 		string: s
-	});	
+	});
 }
 
 function printchar(c){
-	postMessage({
-		request: 'print_character',
+	console.log("WUT?", c);
+	send_obj({
+		request:'print_character',
 		character: c
-	});	
+	});
 }
 
 function terminate(reason){
-	postMessage({
+	send_obj({
 		request: 'terminate_me',
-		reason: reason
-	});	
+		reason: te.encode(reason)
+	});
 }
+
+function send_obj(obj){
+	var ab = str2ab(JSON.stringify(obj));
+	postMessage(ab, [ab]);	
+}
+
 
 function run_binary(binary_file){	
 	if(!binary_file){
@@ -67,11 +71,22 @@ function run_binary(binary_file){
 				let string = '';
 				for (let i = 0; i < len; i++) {
 					string += String.fromCharCode(view[i]);
-				}
-				printstring(string);
+}				printstring(string);
 			}
 		});
 	}
 
 }
 
+function ab2str(buf) {
+	return String.fromCharCode.apply(null, new Uint16Array(buf));
+  }
+  
+  function str2ab(str) {
+	var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
+	var bufView = new Uint16Array(buf);
+	for (var i=0, strLen=str.length; i<strLen; i++) {
+	  bufView[i] = str.charCodeAt(i);
+	}
+	return buf;
+  }

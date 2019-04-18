@@ -22,7 +22,7 @@ int EMSCRIPTEN_KEEPALIVE main(){
 
 	load_image();
 	_printstring("File loaded\n");
-
+	_printstring("HERE");
 	// Set PC to starting position
 	// 0x3000 is the default
 	const uint16_t PC_START = 0x3000;
@@ -31,6 +31,7 @@ int EMSCRIPTEN_KEEPALIVE main(){
 	int limiter = 10;
 
 	int running = 1;
+	_printstring("HERE");
 	while(running){
 		// Fetch instruction at R_PC
 		uint16_t instr = mem_read(reg[R_PC]);
@@ -38,7 +39,7 @@ int EMSCRIPTEN_KEEPALIVE main(){
 		reg[R_PC]++;
 		// The operator is saved at the left 4 bits of the instruction
 		uint16_t op = instr >> 12;
-
+		_printint(op);
 		switch(op){
 			case OP_ADD:
 				{
