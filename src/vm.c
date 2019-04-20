@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include "usleep.h"
 
 #include <emscripten.h>
 
@@ -19,19 +20,14 @@ uint16_t reg[R_COUNT];
 #include "files.h"
 
 int EMSCRIPTEN_KEEPALIVE main(){	
-
-	load_image();
-	_printstring("File loaded\n");
-	_printstring("HERE");
 	// Set PC to starting position
 	// 0x3000 is the default
-	const uint16_t PC_START = 0x3000;
+		char buffer[10] = "TEST\n";
+	_printint((int)buffer);
+	const uint16_t PC_START = load_image();
 	reg[R_PC] = PC_START;
 
-	int limiter = 10;
-
-	int running = 1;
-	_printstring("HERE");
+	int running = 0;
 	while(running){
 		// Fetch instruction at R_PC
 		uint16_t instr = mem_read(reg[R_PC]);
@@ -39,7 +35,7 @@ int EMSCRIPTEN_KEEPALIVE main(){
 		reg[R_PC]++;
 		// The operator is saved at the left 4 bits of the instruction
 		uint16_t op = instr >> 12;
-		_printint(op);
+		//_printint(op);
 		switch(op){
 			case OP_ADD:
 				{
@@ -100,7 +96,7 @@ int EMSCRIPTEN_KEEPALIVE main(){
 			case OP_NOT:
 				{
 					// NOT - Bit-Wise Complement
-					// DR
+					// DR  
 					uint16_t r0 = (instr >> 9) & 0x7;
 					// SR
 					uint16_t r1 = (instr >> 6) & 0x7;
@@ -211,8 +207,11 @@ int EMSCRIPTEN_KEEPALIVE main(){
 						
 						switch (instr & 0xFF){
 			    			case TRAP_GETC:
-								reg[R_R0] = getcharacter();
-			        			break;
+							{
+								_printstring("ye");
+								reg[R_R0] = _getcharacter();
+							}
+								break;
 		        			case TRAP_OUT:
 								printchar(reg[R_R0]);	
 	       						break;
@@ -227,7 +226,7 @@ int EMSCRIPTEN_KEEPALIVE main(){
         						break;
     						case TRAP_IN:
 								_printstring("Enter a character: ");
-								reg[R_R0] = getcharacter();
+								reg[R_R0] = _getcharacter();
 
 								break;
 					    	case TRAP_PUTSP:

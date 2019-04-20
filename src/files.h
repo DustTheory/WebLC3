@@ -16,8 +16,7 @@
 extern int get_image_size();
 
 extern void read_image(uint8_t *ptr, int len);
-
-void load_image_to_memory(uint8_t *image, int len){
+uint16_t load_image_to_memory(uint8_t *image, int len){
 	uint16_t origin;
 	origin = ((uint16_t)image[0]) << 8 | (uint16_t)image[1];	
 	uint16_t max_read = UINT16_MAX - origin;
@@ -28,13 +27,13 @@ void load_image_to_memory(uint8_t *image, int len){
 		i+=2;
 		++p;
 	}
+	return origin;
 }
 
-void load_image(){
+uint16_t load_image(){
 	int len = get_image_size();
 	uint8_t image[1000];
 	read_image(image, len);
-	load_image_to_memory(image, len);
-	return;
+	return load_image_to_memory(image, len);
 }
 

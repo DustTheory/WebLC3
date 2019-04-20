@@ -1,4 +1,4 @@
 #!/bin/bash
 source ~/emsdk/emsdk_env.sh --build=Release
 export EMCC_FORCE_STDLIBS=1
-emcc -O1 -s WASM=1 -s SIDE_MODULE=1 -s ALLOW_MEMORY_GROWTH  -o ./site/vm.wasm ./src/vm.c 
+emcc -O1 -s WASM=1 -s SIDE_MODULE=1 -s ALLOW_MEMORY_GROWTH -o ./site/vm.wasm ./src/vm.c 

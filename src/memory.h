@@ -1,6 +1,6 @@
 int16_t check_key()
 {
-   return 0; 
+   return 1;
 }
 
 uint16_t mem_read(uint16_t address)
