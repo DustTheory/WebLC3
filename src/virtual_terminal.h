@@ -1,10 +1,6 @@
 extern int getcharacter();
 extern void printchar();
 extern void printstring(char *str, uint16_t len);
-//extern void clear_term();
-
-char *clsstr = "\e[1;1H\e[2J";
-int clsstrlen = 10;
 
 void swap(char *a, char *b){
 	char tmp = *b;
@@ -49,29 +45,12 @@ void _printint(int n){
 }
 
 void _printstring(char * str){
-	//int len = 0;
+	int len = 0;
 	for(char *p = str; *p; p++){
-		printchar(*p);
-		//len++;
+		len++;
 	}
-	//printstring(str, len);
+	printstring(str, len);
 }
-int waiting = 0;
-int poll_interval = 100*1000; // miliseconds to microseconds
-int curr_char = 257;
-
-int _getcharacter(){
-	int a = getcharacter();
-	//_printstring("WAITING");
-	//while(1){
-	//	a = getcharacter();
-	//	if(a != 257)
-	//		return a;
-	//	usleep(poll_interval);
-	//}
-	return a;
-}
-
 extern void halt();
 
 

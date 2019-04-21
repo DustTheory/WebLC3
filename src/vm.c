@@ -8,34 +8,51 @@
 
 #include "architecture.h"
 #include "bit_manip.h"
-//#include "unix_terminal_shit.h"
-#include "virtual_terminal.h"
 
 // Allocate 65536 memory locations
 uint16_t memory[UINT16_MAX];
 // Registers are stored in an array
 uint16_t reg[R_COUNT];	
+char terminal_buffer[UINT16_MAX]; // I am just throwing memory away rn
+
+// We will load program binaries here
+uint8_t image[UINT16_MAX];
+
+
+//#include "unix_terminal_shit.h"
+#include "virtual_terminal.h"
+
+int iskeydown = 0;
+int chardown = 257;
+
+int running = 1;
+int fast = 1;
 
 #include "memory.h"
 #include "files.h"
 
-int EMSCRIPTEN_KEEPALIVE main(){	
-	// Set PC to starting position
-	// 0x3000 is the default
-		char buffer[10] = "TEST\n";
-	_printint((int)buffer);
-	const uint16_t PC_START = load_image();
-	reg[R_PC] = PC_START;
+char *op_str[16];
 
-	int running = 0;
-	while(running){
+int EMSCRIPTEN_KEEPALIVE next_instruction(int debug, int _chardown){
+		chardown = _chardown;
+		iskeydown = (chardown != 257);
 		// Fetch instruction at R_PC
 		uint16_t instr = mem_read(reg[R_PC]);
 		// Increment R_PC
 		reg[R_PC]++;
 		// The operator is saved at the left 4 bits of the instruction
 		uint16_t op = instr >> 12;
-		//_printint(op);
+		if(debug == 1){
+			_printstring(op_str[op]);;
+			_printstring("\n");
+		}else if(debug == 2){
+			int c = reg[R_PC]-0x3000;
+			if(c % 50 == 0){
+				_printstring("CNT: ");
+				_printint(c);
+				printchar('\n');
+			}
+		}
 		switch(op){
 			case OP_ADD:
 				{
@@ -208,8 +225,18 @@ int EMSCRIPTEN_KEEPALIVE main(){
 						switch (instr & 0xFF){
 			    			case TRAP_GETC:
 							{
-								_printstring("ye");
-								reg[R_R0] = _getcharacter();
+								int charset = 0;
+								if(fast){
+									fast = 0;
+									reg[R_PC]--;
+								}else{
+									if(chardown != 257){
+										reg[R_R0] = chardown;
+										charset = 1;
+										fast = 1;
+									}else
+										reg[R_PC]--;
+								}
 							}
 								break;
 		        			case TRAP_OUT:
@@ -226,8 +253,17 @@ int EMSCRIPTEN_KEEPALIVE main(){
         						break;
     						case TRAP_IN:
 								_printstring("Enter a character: ");
-								reg[R_R0] = _getcharacter();
-
+								if(fast){
+									fast = 0;
+									reg[R_PC]--;
+								}else{
+									if(chardown != 257){
+										reg[R_R0] = chardown;
+										printchar(chardown);
+										fast = 1;
+									}else
+										reg[R_PC]--;
+								}
 								break;
 					    	case TRAP_PUTSP:
 							{
@@ -256,6 +292,32 @@ int EMSCRIPTEN_KEEPALIVE main(){
 			default:
 				break;
 		}
-	}
+	return fast;
+}
+
+int EMSCRIPTEN_KEEPALIVE main(){	
+	// Set PC to starting position
+	// 0x3000 is the default
+	_printstring("LOADING PROGRAM\n");
+	const uint16_t PC_START = load_image();
+	_printstring("LOADED PROGRAM\n");
+	_printstring("\e[1;1H\e[2J");
+	reg[R_PC] = PC_START;
+	op_str[0] = "BRANCH";
+	op_str[1] = "ADD";
+	op_str[2] = "LOAD";
+	op_str[3] = "STORE";
+	op_str[4] = "JUMP REG";
+	op_str[5] = "AND";
+	op_str[6] = "LOAD REG";
+	op_str[7] = "STORE REG";
+	op_str[8] = "RESERVED";
+	op_str[9] = "NOT";
+	op_str[10] = "LOAD INDIRECT";
+	op_str[11] = "STORE INDIRECT";
+	op_str[12] = "JUMP";
+	op_str[13] = "RESERVED";
+	op_str[14] = "LEA";
+	op_str[15] = "TRAP";
 	return 0;
 }

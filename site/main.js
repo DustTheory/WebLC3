@@ -21,7 +21,6 @@ function send_obj(obj){
 }	
 
 function worker_send_keystroke(){
-	console.log(keydown);
 	send_obj({
 		request: 'update_keydown',
 		keydown: keydown
@@ -30,9 +29,8 @@ function worker_send_keystroke(){
 
 function spawn_worker(){
 	worker.onmessage = function(event){
-		var data = JSON.parse(ab2str(event.data));
-		console.log(data);
-		if(data.request == "terminate_me"){
+		var data = event.data;//JSON.parse(ab2str(event.data));
+		if(data.request == "termiadnate_me"){
 			worker.terminate();
 			console.log("WORKER TERMINATED! Reason:");
 			console.log(event.data.reason);

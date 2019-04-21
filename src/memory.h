@@ -1,20 +1,26 @@
 int16_t check_key()
 {
-   return 1;
+   return iskeydown;
 }
 
 uint16_t mem_read(uint16_t address)
 {
     if (address == MR_KBSR)
-    {
-        if (check_key())
-        {
-           memory[MR_KBSR] = (1 << 15);
-            memory[MR_KBDR] = getchar();
-        }
-        else
-        {
-            memory[MR_KBSR] = 0;
+    {   
+        if(fast){
+            fast = 0;
+            reg[R_PC]--;
+         }else{
+            if (check_key()){
+                if(chardown != 257){
+                    memory[MR_KBSR] = (1 << 15);
+                    memory[MR_KBDR] = (uint16_t)chardown;
+                    fast = 1;
+                }else
+                    reg[R_PC]--;
+            }else{
+                memory[MR_KBSR] = 0;
+            }
         }
     }
     return memory[address];

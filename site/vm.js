@@ -1,12 +1,10 @@
 var te = new TextEncoder("utf8");
 
 onmessage = function(event){
-	console.log("you've got mail");
 	var data = JSON.parse(ab2str(event.data));
 	if(data.request == "binary_file")
 		run_binary(new Uint8Array(str2ab(data.binary_file)));
 	else if(data.request == "update_keydown"){
-		console.log("YEE");
 		update_keydown(data.keydown);
 	}
 }
@@ -35,8 +33,8 @@ function terminate(reason){
 }
 
 function send_obj(obj){
-	var ab = str2ab(JSON.stringify(obj));
-	postMessage(ab, [ab]);	
+	//var ab = str2ab(JSON.stringify(obj));
+	postMessage(obj);	
 }
 
 function clearterm(){
@@ -46,7 +44,16 @@ function clearterm(){
 }
 
 function update_keydown(key){
-	keydown = key;
+	if(key)
+		keydown = key;
+	else
+		keydown = 257;
+}
+
+function get_keydown(){
+	if(!keydown)
+		keydown = 257;
+	return keydown;
 }
 
 function run_binary(binary_file){	
@@ -58,12 +65,6 @@ function run_binary(binary_file){
 			const arrayBuffer = memory.buffer;
 			const importObject= {
 					'env' : {
-						'_getcharacter' : function(){
-							console.log("WUT?");
-							if(!keydown)
-								return 257;
-							return keydown;
-						},
 						'_printstring' : handlePrintString,
 						'_printchar' : printchar,
 						'_clear_term': clearterm,
@@ -72,7 +73,11 @@ function run_binary(binary_file){
 						},
 						'_read_image' : function(ptr, len) {
 							let wasm_image = new Uint8Array(arrayBuffer, ptr, len);
-							wasm_image.set(binary_file);
+							console.log(wasm_image);
+							for (let i = 0; i <= len; i++) {
+								wasm_image[i] = binary_file[i];
+							}
+							console.log(wasm_image);
 							return;
 						},
 						'__memory_base' : 0,	
@@ -83,10 +88,12 @@ function run_binary(binary_file){
 			const module = new WebAssembly.Module(bytes);
 			const instance = new WebAssembly.Instance(module, importObject);
 			const buffer = new Uint8Array(arrayBuffer);
-			instance.exports._main()
-		
+	
+			instance.exports._main();
+			loopdy_loop(instance);
+
 			function handlePrintString(ptr, len, callback) {
-				const view = new Uint8Array(memory.buffer, ptr, len);
+				const view = new Uint8Array(arrayBuffer, ptr, len);
 				let string = '';
 				for (let i = 0; i < len; i++) {
 					string += String.fromCharCode(view[i]);
@@ -95,6 +102,27 @@ function run_binary(binary_file){
 		});
 	}
 
+}
+
+function loopdy_loop(instance){
+	while(true){
+		var msg = instance.exports._next_instruction(0, get_keydown());
+		if(msg == 0){
+			slowdy_loop(instance);
+			break; // Slow down yo;
+		}
+	}
+}
+
+function slowdy_loop(instance){
+	var id = setInterval(() => {
+		var msg = instance.exports._next_instruction(0, get_keydown());
+		keydown = undefined;
+		if(msg == 1){
+			clearInterval(id);
+			loopdy_loop(instance);
+		}
+	}, 1);
 }
 
 function ab2str(buf) {

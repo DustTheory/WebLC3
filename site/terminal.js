@@ -16,10 +16,10 @@ function term_print_buffer(){
 
 function term_print_string(str){
 	term.innerHTML += str;
-	//var a = term.innerHTML.indexOf("[2J[H[3J");
-	//if(a != -1){
-	//	term.innerHTML = term.innerHTML.substr(a+clscr_len);
-	//}
+	var a = Math.max(term.innerHTML.indexOf("[2J[H[3J"),term.innerHTML.indexOf("1;1H[2J"));
+	if(a != -1){
+		term.innerHTML = term.innerHTML.substr(a+clscr_len);
+	}
 	term_scroll_bottom();
 }
 
@@ -38,10 +38,14 @@ function term_clear(){
 term_clear();
 
 document.addEventListener("keydown", event => {
-	keydown = event.keyCode;
+	if(event.shiftKey)
+		keydown = event.keyCode;
+	else if(event.keyCode >= 65 && event.keyCode <= 90)
+		keydown = event.keyCode + 32;
 	worker_send_keystroke();
 });
 
 document.addEventListener("keyup", event => {
 	keydown = undefined;
+	worker_send_keystroke();
 });
