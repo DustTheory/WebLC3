@@ -13,7 +13,7 @@ fileSelector.addEventListener('change', (event) => {
 	}	
 });
 
-const worker = new Worker('vm.js');
+var worker;
 
 function send_obj(obj){
 	var ab = str2ab(JSON.stringify(obj));
@@ -28,18 +28,17 @@ function worker_send_keystroke(){
 }
 
 function spawn_worker(){
+	if(worker)
+		worker.terminate();
+	worker = new Worker('vm.js');
 	worker.onmessage = function(event){
-		var data = event.data;//JSON.parse(ab2str(event.data));
-		if(data.request == "termiadnate_me"){
+		var data = event.data;
+		if(data.request == "terminate_me"){
 			worker.terminate();
 			console.log("WORKER TERMINATED! Reason:");
 			console.log(event.data.reason);
-		}else if(data.request == "print_string"){
-			term_print_string(data.string);
-		}else if(data.request == "print_character"){
-			term_print_string(String.fromCharCode(data.character));
-		}else if(data.request == "clear_term"){
-			term_clear();
+		}else if(data.request == "update_terminal"){
+			term_update(data.termbuffer);
 		}
 	}
 	send_obj({

@@ -13,13 +13,11 @@
 uint16_t memory[UINT16_MAX];
 // Registers are stored in an array
 uint16_t reg[R_COUNT];	
-char terminal_buffer[UINT16_MAX]; // I am just throwing memory away rn
 
 // We will load program binaries here
-uint8_t image[UINT16_MAX];
+uint16_t program_space_avalilable = 0xFDFF - 0x3000;
+uint8_t image[program_space_avalilable];
 
-
-//#include "unix_terminal_shit.h"
 #include "virtual_terminal.h"
 
 int iskeydown = 0;
@@ -32,6 +30,8 @@ int fast = 1;
 #include "files.h"
 
 char *op_str[16];
+
+extern void halt(); // Halts program execution
 
 int EMSCRIPTEN_KEEPALIVE next_instruction(int debug, int _chardown){
 		chardown = _chardown;
@@ -282,6 +282,7 @@ int EMSCRIPTEN_KEEPALIVE next_instruction(int debug, int _chardown){
 							{
 								_printstring("HALT");
 								running = 0;
+								halt();
 							}
 							break;
 					}
@@ -300,6 +301,10 @@ int EMSCRIPTEN_KEEPALIVE main(){
 	// 0x3000 is the default
 	_printstring("LOADING PROGRAM\n");
 	const uint16_t PC_START = load_image();
+	if(PC_START == -1){
+		_printstring("MAX PROGRAM SIZE EXCEEDED");
+		halt();
+	}
 	_printstring("LOADED PROGRAM\n");
 	_printstring("\e[1;1H\e[2J");
 	reg[R_PC] = PC_START;

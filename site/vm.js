@@ -1,4 +1,8 @@
 var te = new TextEncoder("utf8");
+var keydown;
+
+var termbuffer = "";
+var last_update = performance.now();
 
 onmessage = function(event){
 	var data = JSON.parse(ab2str(event.data));
@@ -9,20 +13,33 @@ onmessage = function(event){
 	}
 }
 
-var keydown;
+function term_print_string(str){
+	termbuffer += str;
+	var a = Math.max(termbuffer.indexOf("[2J[H[3J"),termbuffer.indexOf("1;1H[2J"), termbuffer.indexOf("[1;1H[2J"));
+	if(a != -1){
+		termbuffer = termbuffer.substr(a+(termbuffer[a] == '1' ? 7 : 11));
+	}
+}
+
+function update_terminal(){
+	var curr_time = performance.now();
+	if(curr_time-last_update >= 50){
+		last_update = curr_time;
+		send_obj({
+			request: 'update_terminal',
+			termbuffer: termbuffer
+		});
+	}
+}
 
 function printstring(s){
-	send_obj({
-		request:'print_string',
-		string: s+'\n'
-	});
+	term_print_string(s);
+	update_terminal();
 }
 
 function printchar(c){
-	send_obj({
-		request:'print_character',
-		character: c
-	});
+	term_print_string(String.fromCharCode(c));
+	update_terminal();
 }
 
 function terminate(reason){
@@ -33,14 +50,7 @@ function terminate(reason){
 }
 
 function send_obj(obj){
-	//var ab = str2ab(JSON.stringify(obj));
 	postMessage(obj);	
-}
-
-function clearterm(){
-	send_obj({
-		request: 'clear_term'
-	});
 }
 
 function update_keydown(key){
@@ -67,17 +77,15 @@ function run_binary(binary_file){
 					'env' : {
 						'_printstring' : handlePrintString,
 						'_printchar' : printchar,
-						'_clear_term': clearterm,
 						'_get_image_size': function(){
 							return binary_file.length;
 						},
+						'_halt': ()=>terminate("Execution finished. Program halted."),
 						'_read_image' : function(ptr, len) {
 							let wasm_image = new Uint8Array(arrayBuffer, ptr, len);
-							console.log(wasm_image);
 							for (let i = 0; i <= len; i++) {
 								wasm_image[i] = binary_file[i];
 							}
-							console.log(wasm_image);
 							return;
 						},
 						'__memory_base' : 0,	
@@ -88,16 +96,19 @@ function run_binary(binary_file){
 			const module = new WebAssembly.Module(bytes);
 			const instance = new WebAssembly.Instance(module, importObject);
 			const buffer = new Uint8Array(arrayBuffer);
-	
-			instance.exports._main();
+
+			setInterval(update_terminal, 100); 
+
+			instance.exports._main(); 
+
 			loopdy_loop(instance);
 
 			function handlePrintString(ptr, len, callback) {
 				const view = new Uint8Array(arrayBuffer, ptr, len);
 				let string = '';
-				for (let i = 0; i < len; i++) {
+				for (let i = 0; i < len; i++) 
 					string += String.fromCharCode(view[i]);
-}				printstring(string);
+				printstring(string);
 			}
 		});
 	}

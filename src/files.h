@@ -18,6 +18,8 @@ uint16_t load_image_to_memory(uint8_t *image, int len){
 
 uint16_t load_image(){
 	int len = get_image_size();
+	if(len/2 > program_space_available)
+		return -1; // FAIL - image too large
 	read_image(&image[0], len);
 	return load_image_to_memory(image, len);
 }
