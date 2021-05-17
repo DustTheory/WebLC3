@@ -4,8 +4,16 @@
 		<link href="style.css" rel="stylesheet">
 	</head>
 	<body>
-		 <input type='file' accept='text/plain' id="fileSelector"> 
-		 <pre id="terminal" class="terminal">
+		<h3>LC3 VM running in WASM</h3>
+		<p>If it doesn't work, it's probably your browser's fault. I'm to lazy to check for that and show you a nice popup.</p>
+		<h4>Pick a test binary:</h4>
+		<input type="radio" value="binaries/2048.obj" name="binary" id="2048">
+		<label for="2048">2048</label>
+		<br>
+		<input type="radio" value="binaries/rogue.obj" name="binary" id="rogue">
+		<label for="rogue">rogue</label>
+
+		<pre id="terminal" class="terminal">
 		 </pre>
 		<script src="terminal.js"></script>
 		<script src="main.js"></script>

@@ -1,21 +1,29 @@
 var binary_file;
 
-const fileSelector = document.getElementById('fileSelector')
-fileSelector.addEventListener('change', (event) => {
-	const file = event.target.files[0]
-	const filereader = new FileReader()
-	filereader.readAsArrayBuffer(file);
-	filereader.onloadend = function(evt) {
-		if (evt.target.readyState === FileReader.DONE){
-			binary_file = evt.target.result;
-			spawn_worker();
-		}
-	}	
-});
+const binaryRadios = document.querySelectorAll('input[name="binary"]');
+
+binaryRadios.forEach(function(radio){
+	radio.addEventListener('change', function(event) {
+		var xhr = new XMLHttpRequest();
+		xhr.onreadystatechange = function() {
+			if (xhr.readyState == 4) {
+				if (xhr.status == 200) {
+					binary_file = xhr.response;
+					spawn_worker();
+				}
+			}
+		};
+		xhr.open("GET", event.target.value);
+		xhr.responseType = "arraybuffer";
+		xhr.send();
+	});
+})
 
 var worker;
 
 function send_obj(obj){
+	if(!worker)
+		return
 	var ab = str2ab(JSON.stringify(obj));
 	worker.postMessage(ab, [ab]);	
 }	
